@@ -20,12 +20,16 @@ export interface AnalyticsEventPayload {
 
 const STORAGE_KEY_URL = 'kemix_analytics_apps_script_url';
 
+// رابط Google Apps Script الافتراضي المُعدَّ مسبقاً
+const DEFAULT_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx_Px6yTL5sB8Ye8cmMLZG4k_JWtb_axfqDAeCLKAzAXOf09bzefprcWBGn9yFEYU6_/exec';
+
 export const getAnalyticsScriptUrl = (): string => {
   const customUrl = localStorage.getItem(STORAGE_KEY_URL);
   if (customUrl && customUrl.trim()) {
     return customUrl.trim();
   }
-  return (import.meta.env.VITE_GOOGLE_APPS_SCRIPT_URL as string) || '';
+  // استخدم الرابط الافتراضي إذا لم يكن هناك رابط مخصص
+  return (import.meta.env.VITE_GOOGLE_APPS_SCRIPT_URL as string) || DEFAULT_APPS_SCRIPT_URL;
 };
 
 export const setAnalyticsScriptUrl = (url: string): void => {
