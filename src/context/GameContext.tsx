@@ -26,6 +26,7 @@ import {
   paymentGatewayService, 
   createFamilyMemberProfile 
 } from '../services/subscriptionService';
+import { trackScreenView, trackEvent } from '../services/analyticsService';
 
 export type ScreenType = 
   | 'onboarding'
@@ -189,6 +190,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const navigateTo = (screen: ScreenType) => {
     soundEngine.playTap(db.profile.soundEnabled);
+    trackScreenView(screen, db.profile.id, db.profile.name);
     setCurrentScreen(screen);
   };
 
@@ -366,6 +368,15 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
 
     soundEngine.playVictory(db.profile.soundEnabled);
+
+    trackEvent('shop_purchase', {
+      screen: 'shop',
+      userId: db.profile.id,
+      userName: db.profile.name,
+      amount: item.price,
+      details: { itemId: item.id, itemTitle: item.titleAr, price: item.price, category: item.category }
+    });
+
     return { success: true, message: `مبروك! تم شراء واستخدام "${item.titleAr}" بنجاح!` };
   };
 
@@ -499,6 +510,20 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       combo: maxComboInSession
     });
     setShowRewardModal(true);
+
+    trackEvent('lesson_complete', {
+      screen: 'lesson',
+      userId: db.profile.id,
+      userName: db.profile.name,
+      details: {
+        lessonId,
+        unitId,
+        isPerfect,
+        totalLessonXP,
+        lessonCoins,
+        combo: maxComboInSession
+      }
+    });
 
     updateDb(prev => {
       const updatedCompleted = prev.completedLessons.includes(lessonId) 

@@ -21,6 +21,7 @@ import {
 import HorusMascot from '../components/HorusMascot';
 import { calculateSavingsPercent } from '../services/subscriptionService';
 import { SubscriptionPlanType, BillingCycle, PaymentMethodType } from '../types';
+import { trackPaymentClick } from '../services/analyticsService';
 
 export const SubscriptionScreen: React.FC = () => {
   const { db, subscribe, navigateTo } = useGame();
@@ -61,11 +62,36 @@ export const SubscriptionScreen: React.FC = () => {
     setPaymentError(null);
     setPaymentSuccess(null);
     setShowCheckoutModal(true);
+
+    const price = plan === 'family'
+      ? (billingCycle === 'annual' ? config.familyAnnualPrice : config.familyMonthlyPrice)
+      : (billingCycle === 'annual' ? config.individualAnnualPrice : config.individualMonthlyPrice);
+
+    trackPaymentClick('plan_selected', {
+      plan,
+      cycle: billingCycle,
+      amount: price,
+      userId: db.profile.id,
+      userName: db.profile.name
+    });
   };
 
   const handleExecutePayment = async () => {
     setIsProcessingPayment(true);
     setPaymentError(null);
+
+    const price = checkoutPlan === 'family'
+      ? (checkoutCycle === 'annual' ? config.familyAnnualPrice : config.familyMonthlyPrice)
+      : (checkoutCycle === 'annual' ? config.individualAnnualPrice : config.individualMonthlyPrice);
+
+    trackPaymentClick('payment_executed', {
+      plan: checkoutPlan,
+      cycle: checkoutCycle,
+      amount: price,
+      paymentMethod,
+      userId: db.profile.id,
+      userName: db.profile.name
+    });
 
     const res = await subscribe(checkoutPlan, checkoutCycle, paymentMethod, true);
 
@@ -84,6 +110,12 @@ export const SubscriptionScreen: React.FC = () => {
   const handleOrgInquirySubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!orgForm.orgName.trim() || !orgForm.contactName.trim()) return;
+
+    trackPaymentClick('org_quote_requested', {
+      plan: 'organization',
+      userId: db.profile.id,
+      userName: db.profile.name
+    });
 
     setOrgSuccessMessage('تم استلام طلبكم بنجاح! سيتواصل معكم مستشار كيميكس التعليمي لتقديم أفضل عرض سعر وتفعيل لوحة المؤسسة.');
     setTimeout(() => {

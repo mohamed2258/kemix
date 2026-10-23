@@ -2,13 +2,19 @@ import React from 'react';
 import { useGame } from '../context/GameContext';
 import { Sparkles, Crown, CheckCircle2, X, ArrowLeft, ShieldCheck } from 'lucide-react';
 import HorusMascot from './HorusMascot';
+import { trackPaymentClick } from '../services/analyticsService';
 
 export const PaywallModal: React.FC = () => {
-  const { showPaywallModal, setShowPaywallModal, paywallTriggerReason, navigateTo } = useGame();
+  const { showPaywallModal, setShowPaywallModal, paywallTriggerReason, navigateTo, db } = useGame();
 
   if (!showPaywallModal) return null;
 
   const handleOpenSubscription = () => {
+    trackPaymentClick('paywall_click', {
+      plan: 'individual',
+      userId: db?.profile?.id,
+      userName: db?.profile?.name
+    });
     setShowPaywallModal(false);
     navigateTo('subscription');
   };

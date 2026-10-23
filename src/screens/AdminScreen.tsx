@@ -16,10 +16,16 @@ import {
   Save, 
   RefreshCw,
   CreditCard,
-  DollarSign
+  DollarSign,
+  Link,
+  TestTube,
+  Zap,
+  CheckCircle2,
+  AlertTriangle
 } from 'lucide-react';
 import { dbService } from '../services/db';
 import { calculateSavingsPercent } from '../services/subscriptionService';
+import { getAnalyticsScriptUrl, setAnalyticsScriptUrl, testAnalyticsConnection, trackEvent } from '../services/analyticsService';
 
 export const AdminScreen: React.FC = () => {
   const { db, updateCurriculum, addOrUpdateWorld, deleteWorld, importCurriculumFile, triggerSync, updateSubscriptionConfig } = useGame();
@@ -56,6 +62,11 @@ export const AdminScreen: React.FC = () => {
   // JSON Import / Export state
   const [jsonText, setJsonText] = useState('');
   const [jsonMessage, setJsonMessage] = useState<string | null>(null);
+
+  // Google Analytics Integration State
+  const [analyticsScriptUrl, setAnalyticsScriptUrlState] = useState<string>(() => getAnalyticsScriptUrl());
+  const [analyticsTestStatus, setAnalyticsTestStatus] = useState<{ success: boolean; message: string } | null>(null);
+  const [isTesting, setIsTesting] = useState(false);
 
   const worlds = db.curriculum.worlds;
 
@@ -660,31 +671,264 @@ export const AdminScreen: React.FC = () => {
         </div>
       )}
 
-      {/* Tab 5: Analytics */}
+      {/* Tab 5: Analytics & Google Sheets Integration */}
       {activeTab === 'analytics' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-            <div className="game-card" style={{ padding: '20px' }}>
-              <div style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>إجمالي المحاولات المسجلة</div>
-              <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#00e5ff', marginTop: '4px' }}>
-                {db.attempts.length}
-              </div>
+
+          {/* Live Stats Cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px' }}>
+            <div className="game-card" style={{ padding: '18px' }}>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>إجمالي المحاولات</div>
+              <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#00e5ff', marginTop: '4px' }}>{db.attempts.length}</div>
             </div>
-            <div className="game-card" style={{ padding: '20px' }}>
-              <div style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>الدروس المنجزة</div>
-              <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#10b981', marginTop: '4px' }}>
-                {db.completedLessons.length}
-              </div>
+            <div className="game-card" style={{ padding: '18px' }}>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>الدروس المنجزة</div>
+              <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#10b981', marginTop: '4px' }}>{db.completedLessons.length}</div>
             </div>
-            <div className="game-card" style={{ padding: '20px' }}>
-              <div style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>إجمالي العوالم النشطة</div>
-              <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#fbbf24', marginTop: '4px' }}>
-                {worlds.length}
-              </div>
+            <div className="game-card" style={{ padding: '18px' }}>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>العملات المكسوبة</div>
+              <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#fbbf24', marginTop: '4px' }}>{db.profile.coins}</div>
+            </div>
+            <div className="game-card" style={{ padding: '18px' }}>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>مستوى اللاعب</div>
+              <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#a855f7', marginTop: '4px' }}>Lv.{db.profile.level}</div>
             </div>
           </div>
+
+          {/* Google Apps Script Integration Panel */}
+          <div className="game-card" style={{ padding: '24px', border: '1px solid rgba(0, 229, 255, 0.3)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '12px', backgroundColor: 'rgba(16, 185, 129, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Link size={22} color="#10b981" />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: 'var(--text-main)' }}>
+                  ربط Google Sheets عبر Apps Script
+                </h3>
+                <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                  كل نقرة على زر الدفع، وتصفح الشاشات، وإتمام الدروس تُسجَّل تلقائياً في شيت Google
+                </p>
+              </div>
+            </div>
+
+            {/* Step Instructions */}
+            <div style={{
+              backgroundColor: 'rgba(0, 229, 255, 0.06)',
+              border: '1px solid rgba(0, 229, 255, 0.2)',
+              borderRadius: '12px',
+              padding: '16px',
+              marginBottom: '20px',
+              fontSize: '0.85rem',
+              lineHeight: '1.8',
+              color: 'var(--text-muted)'
+            }}>
+              <div style={{ color: '#00e5ff', fontWeight: 900, marginBottom: '8px', fontSize: '0.9rem' }}>
+                📋 خطوات إعداد الشيت (مرة واحدة فقط):
+              </div>
+              <div><span style={{ color: '#fbbf24', fontWeight: 800 }}>1.</span> افتح Google Sheets وأنشئ شيت جديد</div>
+              <div><span style={{ color: '#fbbf24', fontWeight: 800 }}>2.</span> من القائمة اضغط: <strong style={{ color: '#00e5ff' }}>ملحقات (Extensions) &rarr; Apps Script</strong></div>
+              <div><span style={{ color: '#fbbf24', fontWeight: 800 }}>3.</span> احذف الكود الموجود والصق محتوى ملف <strong style={{ color: '#fbbf24' }}>google_apps_script.gs</strong> الموجود في جذر المشروع</div>
+              <div><span style={{ color: '#fbbf24', fontWeight: 800 }}>4.</span> اضغط <strong style={{ color: '#10b981' }}>Deploy &rarr; New deployment &rarr; Web app</strong></div>
+              <div><span style={{ color: '#fbbf24', fontWeight: 800 }}>5.</span> اضبط "Who has access" على <strong style={{ color: '#10b981' }}>Anyone</strong> ثم انسخ رابط Web App URL</div>
+              <div><span style={{ color: '#fbbf24', fontWeight: 800 }}>6.</span> الصق الرابط في الحقل أدناه واضغط "حفظ وتفعيل"</div>
+            </div>
+
+            {/* URL Input */}
+            <div style={{ marginBottom: '14px' }}>
+              <label style={{ display: 'block', fontSize: '0.86rem', color: '#00e5ff', fontWeight: 800, marginBottom: '8px' }}>
+                🔗 رابط Google Apps Script Web App URL:
+              </label>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <input
+                  type="url"
+                  value={analyticsScriptUrl}
+                  onChange={e => setAnalyticsScriptUrlState(e.target.value)}
+                  placeholder="https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec"
+                  style={{
+                    flex: 1,
+                    padding: '12px 16px',
+                    backgroundColor: '#040814',
+                    border: analyticsScriptUrl ? '1px solid #10b981' : '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '10px',
+                    color: '#38bdf8',
+                    fontFamily: 'var(--font-code)',
+                    fontSize: '0.85rem',
+                    outline: 'none',
+                    direction: 'ltr'
+                  }}
+                />
+                <button
+                  onClick={() => {
+                    setAnalyticsScriptUrl(analyticsScriptUrl);
+                    setAnalyticsTestStatus({ success: true, message: '✓ تم حفظ الرابط! اضغط "اختبار الاتصال" للتحقق.' });
+                  }}
+                  style={{
+                    padding: '12px 20px',
+                    borderRadius: '10px',
+                    background: 'linear-gradient(135deg, #10b981, #059669)',
+                    color: '#fff',
+                    border: 'none',
+                    fontWeight: 900,
+                    cursor: 'pointer',
+                    fontSize: '0.88rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  <Save size={16} />
+                  حفظ وتفعيل
+                </button>
+              </div>
+            </div>
+
+            {/* Test Connection Button */}
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              <button
+                onClick={async () => {
+                  setIsTesting(true);
+                  setAnalyticsTestStatus(null);
+                  const result = await testAnalyticsConnection(analyticsScriptUrl || undefined);
+                  setAnalyticsTestStatus(result);
+                  setIsTesting(false);
+                }}
+                disabled={isTesting || !analyticsScriptUrl}
+                style={{
+                  padding: '10px 20px',
+                  borderRadius: '10px',
+                  backgroundColor: 'rgba(0, 229, 255, 0.15)',
+                  border: '1px solid #00e5ff',
+                  color: '#00e5ff',
+                  fontWeight: 800,
+                  cursor: isTesting || !analyticsScriptUrl ? 'not-allowed' : 'pointer',
+                  opacity: !analyticsScriptUrl ? 0.5 : 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontSize: '0.88rem'
+                }}
+              >
+                <TestTube size={16} />
+                {isTesting ? 'جاري الاختبار...' : 'اختبار الاتصال بالشيت'}
+              </button>
+
+              <button
+                onClick={() => {
+                  trackEvent('manual_admin_test', {
+                    screen: 'admin',
+                    userId: db.profile.id,
+                    userName: db.profile.name,
+                    details: { message: 'تجربة يدوية من لوحة الإدارة' }
+                  });
+                  setAnalyticsTestStatus({ success: true, message: '⚡ تم إرسال حدث تجريبي! تحقق من Google Sheets الآن.' });
+                }}
+                disabled={!analyticsScriptUrl}
+                style={{
+                  padding: '10px 20px',
+                  borderRadius: '10px',
+                  backgroundColor: 'rgba(251, 191, 36, 0.15)',
+                  border: '1px solid #fbbf24',
+                  color: '#fbbf24',
+                  fontWeight: 800,
+                  cursor: !analyticsScriptUrl ? 'not-allowed' : 'pointer',
+                  opacity: !analyticsScriptUrl ? 0.5 : 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontSize: '0.88rem'
+                }}
+              >
+                <Zap size={16} />
+                إرسال حدث تجريبي للشيت
+              </button>
+            </div>
+
+            {/* Status Message */}
+            {analyticsTestStatus && (
+              <div style={{
+                marginTop: '14px',
+                padding: '12px 16px',
+                borderRadius: '10px',
+                backgroundColor: analyticsTestStatus.success ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+                border: `1px solid ${analyticsTestStatus.success ? '#10b981' : '#ef4444'}`,
+                color: analyticsTestStatus.success ? '#10b981' : '#ef4444',
+                fontSize: '0.88rem',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                {analyticsTestStatus.success ? <CheckCircle2 size={18} /> : <AlertTriangle size={18} />}
+                {analyticsTestStatus.message}
+              </div>
+            )}
+          </div>
+
+          {/* Events Tracked Legend */}
+          <div className="game-card" style={{ padding: '20px' }}>
+            <h4 style={{ fontWeight: 900, color: 'var(--text-main)', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <BarChart3 size={18} color="#fbbf24" />
+              الأحداث التي يتتبعها كيميكس ويرسلها للشيت تلقائياً:
+            </h4>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '10px' }}>
+              {[
+                { icon: '💳', event: 'plan_selected', label: 'نقر على خطة الاشتراك (Individual/Family/Org)', color: '#00e5ff' },
+                { icon: '✅', event: 'payment_executed', label: 'نقر على زر إتمام الدفع الفعلي', color: '#10b981' },
+                { icon: '🔒', event: 'paywall_click', label: 'محاولة الوصول لمحتوى بريميوم (Paywall)', color: '#f97316' },
+                { icon: '🏢', event: 'org_quote_requested', label: 'طلب عرض سعر للمؤسسات والمدارس', color: '#a855f7' },
+                { icon: '👁️', event: 'screen_view', label: 'زيارة وتصفح كل شاشة داخل التطبيق', color: '#fbbf24' },
+                { icon: '🎓', event: 'lesson_complete', label: 'إتمام درس برمجي بنجاح', color: '#10b981' },
+                { icon: '🛒', event: 'shop_purchase', label: 'شراء عنصر من متجر كيميكس', color: '#fbbf24' },
+                { icon: '⚡', event: 'manual_admin_test', label: 'إشارة اختبار يدوية من لوحة الإدارة', color: '#94a3b8' },
+              ].map(ev => (
+                <div key={ev.event} style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  padding: '10px 12px',
+                  backgroundColor: 'var(--bg-main)',
+                  borderRadius: '10px',
+                  border: '1px solid rgba(255,255,255,0.05)'
+                }}>
+                  <span style={{ fontSize: '1.2rem' }}>{ev.icon}</span>
+                  <div>
+                    <div style={{ fontSize: '0.78rem', fontFamily: 'var(--font-code)', color: ev.color, fontWeight: 700 }}>{ev.event}</div>
+                    <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '1px' }}>{ev.label}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Sheets Columns Description */}
+          <div className="game-card" style={{ padding: '20px', fontSize: '0.85rem' }}>
+            <h4 style={{ fontWeight: 900, color: 'var(--text-main)', marginBottom: '12px' }}>
+              📊 أعمدة Google Sheet المُولَّدة تلقائياً:
+            </h4>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', direction: 'rtl', fontSize: '0.82rem' }}>
+                <thead>
+                  <tr style={{ backgroundColor: 'rgba(0,229,255,0.1)', color: '#00e5ff' }}>
+                    {['التاريخ والوقت', 'نوع الحدث', 'اسم المستخدم', 'الخطة', 'الدورة', 'المبلغ (ج.م)', 'طريقة الدفع', 'الشاشة', 'التفاصيل (JSON)', 'رابط الصفحة'].map(h => (
+                      <th key={h} style={{ padding: '8px 12px', textAlign: 'right', border: '1px solid rgba(255,255,255,0.06)', fontWeight: 900 }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr style={{ color: 'var(--text-dim)' }}>
+                    {['23/10/2026، 3:15 م', '💳 نقر على زر الدفع', 'محمد', 'individual', 'سنوي', '399.99 ج.م', 'credit_card', 'subscription', '{...}', 'https://...'].map((v, i) => (
+                      <td key={i} style={{ padding: '8px 12px', border: '1px solid rgba(255,255,255,0.04)', fontFamily: i >= 8 ? 'var(--font-code)' : 'inherit' }}>{v}</td>
+                    ))}
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
         </div>
       )}
+
 
       {/* Tab 6: Pricing & Subscription CMS */}
       {activeTab === 'pricing' && (
