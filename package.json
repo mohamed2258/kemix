@@ -1,0 +1,81 @@
+{
+  "name": "kemix",
+  "version": "1.0.0",
+  "description": "KEMIX - لعبة تعلم البرمجة التفاعلية المستوحاة من التلعيب والصقر المصري",
+  "main": "electron/main.cjs",
+  "author": "KEMIX Team",
+  "scripts": {
+    "dev:vite": "vite",
+    "dev:electron": "wait-on tcp:5173 && cross-env NODE_ENV=development electron .",
+    "dev": "concurrently -k \"npm run dev:vite\" \"npm run dev:electron\"",
+    "build:vite": "tsc && vite build",
+    "build:electron": "electron-builder --win --x64",
+    "build:apk": "build-apk.bat",
+    "cap:open": "npx cap open android",
+    "build": "npm run build:vite && electron-builder --win --x64",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "predeploy": "npm run build:vite",
+    "deploy": "gh-pages -d dist"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/cli": "^8.5.3",
+    "@capacitor/core": "^8.5.3",
+    "canvas-confetti": "^1.9.4",
+    "lucide-react": "^1.61.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@types/canvas-confetti": "^1.9.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "concurrently": "^10.0.6",
+    "cross-env": "^10.1.0",
+    "electron": "^45.0.0",
+    "electron-builder": "^26.15.3",
+    "gh-pages": "^6.3.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5",
+    "vitest": "^4.1.4",
+    "wait-on": "^9.5.1"
+  },
+  "build": {
+    "appId": "com.kemix.learning",
+    "productName": "KEMIX - لعبة تعلم البرمجة",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "public/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "KEMIX - لعبة تعلم البرمجة"
+    }
+  }
+}
