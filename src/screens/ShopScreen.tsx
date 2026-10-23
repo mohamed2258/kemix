@@ -3,6 +3,7 @@ import { useGame } from '../context/GameContext';
 import { ShopItem } from '../types';
 import { Coins, Check, Sparkles, Shield, Heart, Flame, ArrowLeft, History, ShoppingBag, Eye } from 'lucide-react';
 import HorusMascot from '../components/HorusMascot';
+import { trackEvent } from '../services/analyticsService';
 
 export const ShopScreen: React.FC = () => {
   const { db, shopItems, buyShopItem, equipItem, navigateTo } = useGame();
@@ -18,6 +19,20 @@ export const ShopScreen: React.FC = () => {
   });
 
   const handleBuy = (item: ShopItem) => {
+    // تتبع فوري للنقر على زر الشراء
+    trackEvent('shop_buy_click', {
+      screen: 'shop',
+      userId: profile.id,
+      userName: profile.name,
+      amount: item.price,
+      details: {
+        itemId: item.id,
+        itemTitle: item.titleAr,
+        price: item.price,
+        currentCoins: profile.coins
+      }
+    });
+
     const res = buyShopItem(item);
     setPurchaseNotice({ message: res.message, isSuccess: res.success });
     setTimeout(() => {

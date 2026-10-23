@@ -47,11 +47,23 @@ function doPost(e) {
 
     // ترجمة وتوضيح اسم الحدث لسهولة القراءة
     var eventDisplay = eventType;
-    if (eventType === 'payment_click') eventDisplay = '💳 نقر على زر الدفع / الاشتراك';
-    else if (eventType === 'screen_view') eventDisplay = '👁️ تصفح شاشة';
-    else if (eventType === 'lesson_complete') eventDisplay = '🎓 إكمال درس';
-    else if (eventType === 'shop_purchase') eventDisplay = '🛒 شراء من المتجر';
-    else if (eventType === 'test_ping') eventDisplay = '⚡ تجربة اتصال';
+    if (eventType === 'plan_selected' || eventType === 'payment_click' || eventType === 'checkout_start') {
+      eventDisplay = '💳 نقر على زر الدفع / اختيار الخطة';
+    } else if (eventType === 'payment_executed') {
+      eventDisplay = '✅ تأكيد وإتمام الدفع والاشتراك';
+    } else if (eventType === 'paywall_click') {
+      eventDisplay = '🔒 محاولة فتح محتوى مقفول (Paywall)';
+    } else if (eventType === 'org_quote_requested') {
+      eventDisplay = '🏢 طلب عرض سعر مؤسسات';
+    } else if (eventType === 'screen_view') {
+      eventDisplay = '👁️ تصفح شاشة';
+    } else if (eventType === 'lesson_complete') {
+      eventDisplay = '🎓 إكمال درس';
+    } else if (eventType === 'shop_purchase' || eventType === 'shop_buy_click') {
+      eventDisplay = '🛒 شراء من المتجر';
+    } else if (eventType === 'manual_admin_test' || eventType === 'test_ping') {
+      eventDisplay = '⚡ تجربة من لوحة الإدارة';
+    }
 
     // إضافة الصف للشيت
     sheet.appendRow([
@@ -71,7 +83,7 @@ function doPost(e) {
     updateDashboardSummary(ss);
 
     return ContentService
-      .createTextOutput(JSON.stringify({ result: 'success' }))
+      .createTextOutput(JSON.stringify({ result: 'success', eventRecorded: eventDisplay }))
       .setMimeType(ContentService.MimeType.JSON);
 
   } catch (error) {
@@ -144,18 +156,24 @@ function updateDashboardSummary(ss) {
   dash.getRange('A2').setValue('آخر تحديث:').setFontWeight('bold');
   dash.getRange('B2').setValue(new Date().toLocaleString('ar-EG'));
 
-  dash.getRange('A4').setValue('💳 إجمالي النقرات على زر الدفع:').setFontWeight('bold');
-  dash.getRange('B4').setFormula('=COUNTIF(\'سجل التفاعلات (Events)\'!B:B, "*دفع*")');
+  dash.getRange('A4').setValue('💳 إجمالي النقرات على الاشتراك والدفع:').setFontWeight('bold');
+  dash.getRange('B4').setFormula('=COUNTIF(\'سجل التفاعلات (Events)\'!B:B, "*دفع*") + COUNTIF(\'سجل التفاعلات (Events)\'!B:B, "*اشتراك*") + COUNTIF(\'سجل التفاعلات (Events)\'!B:B, "*خطة*") + COUNTIF(\'سجل التفاعلات (Events)\'!B:B, "*payment*") + COUNTIF(\'سجل التفاعلات (Events)\'!B:B, "*plan*")');
 
   dash.getRange('A5').setValue('👁️ إجمالي زيارات وتصفح الشاشات:').setFontWeight('bold');
-  dash.getRange('B5').setFormula('=COUNTIF(\'سجل التفاعلات (Events)\'!B:B, "*تصفح*")');
+  dash.getRange('B5').setFormula('=COUNTIF(\'سجل التفاعلات (Events)\'!B:B, "*تصفح*") + COUNTIF(\'سجل التفاعلات (Events)\'!B:B, "*screen*")');
 
   dash.getRange('A6').setValue('🎓 إجمالي الدروس المكتملة:').setFontWeight('bold');
-  dash.getRange('B6').setFormula('=COUNTIF(\'سجل التفاعلات (Events)\'!B:B, "*درس*")');
+  dash.getRange('B6').setFormula('=COUNTIF(\'سجل التفاعلات (Events)\'!B:B, "*درس*") + COUNTIF(\'سجل التفاعلات (Events)\'!B:B, "*lesson*")');
 
   dash.getRange('A7').setValue('🛒 إجمالي المشتريات من المتجر:').setFontWeight('bold');
-  dash.getRange('B7').setFormula('=COUNTIF(\'سجل التفاعلات (Events)\'!B:B, "*متجر*")');
+  dash.getRange('B7').setFormula('=COUNTIF(\'سجل التفاعلات (Events)\'!B:B, "*متجر*") + COUNTIF(\'سجل التفاعلات (Events)\'!B:B, "*شراء*") + COUNTIF(\'سجل التفاعلات (Events)\'!B:B, "*shop*")');
 
-  dash.getRange('A4:B7').setBackground('#f8fafc').setBorder(true, true, true, true, true, true);
-  dash.getRange('B4:B7').setFontWeight('bold').setFontSize(12).setHorizontalAlignment('center');
+  dash.getRange('A8').setValue('🔒 محاولات الوصول المقفول (Paywall):').setFontWeight('bold');
+  dash.getRange('B8').setFormula('=COUNTIF(\'سجل التفاعلات (Events)\'!B:B, "*مقفول*") + COUNTIF(\'سجل التفاعلات (Events)\'!B:B, "*Paywall*")');
+
+  dash.getRange('A9').setValue('🏢 طلبات المؤسسات والمدارس:').setFontWeight('bold');
+  dash.getRange('B9').setFormula('=COUNTIF(\'سجل التفاعلات (Events)\'!B:B, "*مؤسسات*") + COUNTIF(\'سجل التفاعلات (Events)\'!B:B, "*org*")');
+
+  dash.getRange('A4:B9').setBackground('#f8fafc').setBorder(true, true, true, true, true, true);
+  dash.getRange('B4:B9').setFontWeight('bold').setFontSize(12).setHorizontalAlignment('center');
 }

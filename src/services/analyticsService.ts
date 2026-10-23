@@ -13,6 +13,8 @@ export interface AnalyticsEventPayload {
   amount?: number;
   paymentMethod?: string;
   screen?: string;
+  funnelStep?: string;
+  eventGroup?: string;
   details?: Record<string, any>;
   url?: string;
   userAgent?: string;
@@ -66,21 +68,20 @@ export const trackEvent = async (
     return false;
   }
 
+  // Send to Google Apps Script via fetch (keepalive ensures delivery even during navigation)
   try {
-    if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
-      const blob = new Blob([JSON.stringify(payload)], { type: 'text/plain;charset=UTF-8' });
-      const sent = navigator.sendBeacon(scriptUrl, blob);
-      if (sent) return true;
-    }
-
-    await fetch(scriptUrl, {
+    fetch(scriptUrl, {
       method: 'POST',
       mode: 'no-cors',
+      keepalive: true,
       headers: {
         'Content-Type': 'text/plain;charset=UTF-8'
       },
       body: JSON.stringify(payload)
+    }).catch(err => {
+      console.warn('[KEMIX Analytics] Background fetch failed:', err);
     });
+
     return true;
   } catch (err) {
     console.warn('[KEMIX Analytics] Failed to send event to Google Apps Script:', err);
@@ -102,8 +103,10 @@ export const trackPaymentClick = (
     userName?: string;
   }
 ) => {
-  return trackEvent('payment_click', {
+  return trackEvent(step, {
     ...data,
+    funnelStep: step,
+    eventGroup: 'payment',
     details: {
       funnelStep: step,
       ...data
